@@ -26,17 +26,26 @@ void initWifi() {
 }
 
 ESP8266WebServer server(80);
+boolean stopped = false;
 
 void handleRoot() {
   server.send(200, "text/plain", "hello from esp8266!\n");
 }
 
 void handleStop() {
-  
+  stopped = true;
+  server.send(200, "text/plain", "Stopping motors!\n");
+}
+
+void handleStart() {
+  stopped = false;
+  server.send(200, "text/plain", "Starting motors!\n");
 }
 
 void startWebServer() {
   server.on("/", handleRoot);
+  server.on("/stop", handleStop);
+  server.on("/start", handleStart);
   server.begin();
   
   Serial.println("HTTP server started");
@@ -76,9 +85,10 @@ void startSonar() {
   if(distance < safeDistance) {
     Serial.print("WARNING GORNING! Approaching object!!");
     stop_motors();
-  }
-  
-  if(distance > safeDistance+1) {
+  } else if(stopped) {
+    Serial.print("Stop request was received");
+    stop_motors();
+  } else if(distance > safeDistance+1) {
     Serial.print("Danger averted!");
     start_motors();
   }
@@ -100,18 +110,18 @@ void start_motors() {
 void stop_motors() {
   digitalWrite(motor1_trigger, LOW);
 }
-
+  
 void setup() {
   Serial.begin(9600);
   Serial.println();
   
-  //initSonar();
+  initSonar();
   initMotors();
   initWifi();
   startWebServer();
 }
 
 void loop() {
- //startSonar();
-  server.handleClient();
+ startSonar();
+ server.handleClient();
 }
